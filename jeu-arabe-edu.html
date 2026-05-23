@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L'Île des Mots Magiques - Jeu d'Arabe pour Enfants</title>
+    
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts for child-friendly typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&family=Tajawal:wght@700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: radial-gradient(circle, #ffeedd 0%, #ffdfbf 100%);
+            overflow-x: hidden;
+            user-select: none;
+        }
+        .font-game {
+            font-family: 'Fredoka One', sans-serif;
+        }
+        .font-arabic {
+            font-family: 'Tajawal', sans-serif;
+        }
+        /* Floating background clouds */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 100px;
+            animation: float 25s infinite linear;
+            pointer-events: none;
+            z-index: 1;
+        }
+        @keyframes float {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-20vw); }
+        }
+        /* Smooth scale animation on hover */
+        .interactive-element {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .interactive-element:hover {
+            transform: scale(1.05);
+        }
+        .interactive-element:active {
+            transform: scale(0.95);
+        }
+        /* Winding path styling */
+        .board-tile {
+            perspective: 1000px;
+            transition: all 0.5s ease;
+        }
+        /* Active bounce for the mascot */
+        .mascot-bounce {
+            animation: bounce 1.2s infinite alternate;
+        }
+        @keyframes bounce {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-15px) scale(1.05); }
+        }
+        /* Shake effect for traps */
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        /* Confetti simulation overlay */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0.8;
+            animation: confetti-fall 3s infinite linear;
+            z-index: 50;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(-10px) rotate(0deg); }
+            100% { transform: translateY(100vh) rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen relative flex flex-col items-center justify-start p-2 md:p-6">
+
+    <div class="cloud w-32 h-12 top-10" style="animation-delay: 0s; animation-duration: 25s;"></div>
+    <div class="cloud w-48 h-16 top-32" style="animation-delay: -5s; animation-duration: 35s;"></div>
+    <div class="cloud w-28 h-10 top-2/3" style="animation-delay: -12s; animation-duration: 20s;"></div>
+
+    <!-- Hidden native audio element for bulletproof Google TTS playing -->
+    <audio id="tts-audio" class="hidden" preload="auto"></audio>
+
+    <!-- MAIN CONTAINER -->
+    <div class="w-full max-w-5xl z-10 flex flex-col items-center">
+
+        <!-- SETUP SCREEN (French UI, Only target vocab in Arabic) -->
+        <div id="setup-screen" class="w-full bg-white/95 backdrop-blur-md rounded-3xl p-6 md:p-10 shadow-2xl border-4 border-amber-400 mt-4 max-w-2xl transition-all duration-500">
+            <div class="text-center mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-6xl animate-bounce inline-block">🏝️</span>
+                    
+                    <!-- Sound Unlock and Test Buttons for Teachers and Ilyas -->
+                    <div class="flex flex-col items-end gap-1">
+                        <button onclick="manuallyUnlockAudio()" id="audio-unlock-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg text-xs interactive-element flex items-center gap-2 animate-pulse border-b-4 border-red-700">
+                            <span>🔊 ACTIVER LE SON ICI !</span>
+                        </button>
+                        <span id="diagnostic-text" class="text-[9px] text-gray-400 font-bold font-mono">Audio: En attente d'activation 💤</span>
+                    </div>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-orange-600 mt-2 font-game">L'Île des Mots Magiques</h1>
+                <p class="text-gray-500 font-bold mt-1 text-sm md:text-base">Une aventure interactive spécialement conçue pour Ilyas 🦊</p>
+            </div>
+
+            <!-- Configuration Form in French -->
+            <div class="space-y-6">
+                <!-- Theme selection -->
+                <div>
+                    <label class="block text-base font-bold text-gray-800 mb-2">🎈 1. Choisis le thème de l'île :</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="selectTheme('candy', this)" class="theme-btn py-3 px-2 bg-pink-100 hover:bg-pink-200 border-4 border-pink-400 text-pink-700 rounded-2xl font-bold transition flex flex-col items-center gap-1 active-theme">
+                            <span class="text-2xl">🍬</span>
+                            <span class="text-xs font-semibold">Vallée des Bonbons</span>
+                        </button>
+                        <button onclick="selectTheme('forest', this)" class="theme-btn py-3 px-2 bg-green-100 hover:bg-green-200 border-4 border-transparent text-green-700 rounded-2xl font-bold transition flex flex-col items-center gap-1">
+                            <span class="text-2xl">🌲</span>
+                            <span class="text-xs font-semibold">Forêt Magique</span>
+                        </button>
+                        <button onclick="selectTheme('space', this)" class="theme-btn py-3 px-2 bg-indigo-100 hover:bg-indigo-200 border-4 border-transparent text-indigo-700 rounded-2xl font-bold transition flex flex-col items-center gap-1">
+                            <span class="text-2xl">🚀</span>
+                            <span class="text-xs font-semibold">Orbite d'Étoiles</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vocabulary Selection -->
+                <div>
+                    <label class="block text-base font-bold text-gray-800 mb-2">📝 2. Choisis ta leçon (Livre "J'aime l'arabe") :</label>
+                    <div class="bg-amber-50 p-4 rounded-2xl border-2 border-amber-200">
+                        <p class="text-xs text-amber-800 font-bold mb-3">📍 Sélectionne un thème pour charger les mots arabes automatiquement :</p>
+                        <select id="lesson-preset" onchange="loadPresetWords(this.value)" class="w-full p-3 rounded-xl border-2 border-amber-300 font-bold text-gray-700 mb-4 bg-white text-sm">
+                            <option value="toys">Leçon 1 : Mes Jouets / ألعابـي (Ballon, Poupée, Voiture, Train, Avion)</option>
+                            <option value="animals">Leçon 2 : Les Animaux / الحيوانات (Lapin, Lion, Chat, Chien, Oiseau)</option>
+                            <option value="fruits">Leçon 3 : Les Fruits / الفواكه (Banane, Pomme, Orange, Raisin, Fraise)</option>
+                            <option value="custom">✍️ Personnaliser des mots arabes...</option>
+                        </select>
+
+                        <!-- Dynamic word list display -->
+                        <div class="space-y-2">
+                            <span class="text-xs text-gray-500 font-bold block">Mots cibles arabes à apprendre :</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-5 gap-2" id="words-inputs-container">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skill focus selection -->
+                <div>
+                    <label class="block text-base font-bold text-gray-800 mb-2">🎯 3. Choisis l'activité du jour :</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="selectSkill('pronounce', this)" class="skill-btn py-3 px-4 bg-orange-100 hover:bg-orange-200 border-4 border-orange-400 text-orange-700 rounded-xl font-bold transition flex flex-col items-center justify-center gap-1 active-skill">
+                            <span class="flex items-center gap-2 font-bold text-sm">🗣️ Prononciation</span>
+                            <span class="text-[10px] font-normal text-orange-600">Écoute le mot et répète-le !</span>
+                        </button>
+                        <button onclick="selectSkill('listening', this)" class="skill-btn py-3 px-4 bg-blue-100 hover:bg-blue-200 border-4 border-transparent text-blue-700 rounded-xl font-bold transition flex flex-col items-center justify-center gap-1">
+                            <span class="flex items-center gap-2 font-bold text-sm">👂 Écoute et Reconnaissance</span>
+                            <span class="text-[10px] font-normal text-blue-600">Écoute le son et choisis la bonne image !</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Start Adventure Button -->
+                <button onclick="startAdventure()" class="w-full py-4 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-black text-xl rounded-2xl shadow-lg border-b-8 border-orange-700 interactive-element transition duration-150 transform active:translate-y-1 font-game">
+                    🚀 COMMENCER L'AVENTURE !
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN GAME SCREEN (Initially Hidden) -->
+        <div id="game-screen" class="w-full hidden flex flex-col items-center">
+            
+            <!-- Game Top bar with Scores (All in French) -->
+            <div class="w-full bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-orange-400 flex flex-wrap items-center justify-between gap-4 mb-6">
+                <!-- Mascot Mini Avatar -->
+                <div class="flex items-center gap-3">
+                    <div class="relative w-14 h-14 bg-gradient-to-tr from-amber-300 to-yellow-100 rounded-full flex items-center justify-center border-2 border-orange-400 shadow-md">
+                        <span class="text-4xl">🦊</span>
+                        <!-- Custom accessory layer -->
+                        <div id="mini-avatar-accessories" class="absolute inset-0 flex items-center justify-center pointer-events-none"></div>
+                    </div>
+                    <div>
+                        <div class="text-base font-black text-orange-600">Semsem le Pilote 🦊</div>
+                        <div class="text-xs text-gray-500 font-bold">Il t'accompagne tout au long du chemin !</div>
+                    </div>
+                </div>
+
+                <!-- Stats values -->
+                <div class="flex items-center gap-4">
+                    <!-- Coins -->
+                    <div class="bg-yellow-100 border-2 border-yellow-400 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
+                        <span class="text-2xl animate-spin" style="animation-duration: 4s;">⭐</span>
+                        <div>
+                            <div class="text-[10px] text-yellow-700 font-bold">Étoiles d'Or</div>
+                            <div id="coin-counter" class="text-base font-black text-yellow-600 font-game">20</div>
+                        </div>
+                    </div>
+
+                    <!-- Shields -->
+                    <div id="shield-badge" class="bg-blue-100 border-2 border-blue-400 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-all duration-300 opacity-40">
+                        <span class="text-2xl">🛡️</span>
+                        <div>
+                            <div class="text-[10px] text-blue-700 font-bold">Bouclier</div>
+                            <div id="shield-status" class="text-xs font-black text-blue-600">Désactivé</div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Closet and Setup Buttons -->
+                    <div class="flex gap-2">
+                        <button onclick="toggleWardrobe(true)" class="p-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl shadow-md font-bold text-xs interactive-element flex flex-col items-center">
+                            <span>🧥 BOUTIQUE</span>
+                            <span class="text-[8px] font-normal">Changer de look</span>
+                        </button>
+                        <button onclick="returnToSetup()" class="p-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl shadow-md font-bold text-xs interactive-element flex flex-col items-center">
+                            <span>⚙️ RETOUR</span>
+                            <span class="text-[8px] font-normal">Configuration</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- The Magic Path Grid and Board layout -->
+            <div id="game-board-container" class="w-full relative min-h-[500px] bg-sky-200/40 rounded-3xl p-6 border-4 border-sky-400/80 shadow-inner flex flex-col items-center justify-center mb-6">
+                <!-- Winding dynamic board path -->
+                <div id="board-path" class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl relative z-10">
+                    <!-- Path Tiles will be rendered here dynamically -->
+                </div>
+
+                <!-- Floating Mascot token overlay representing Semsem -->
+                <div id="mascot-token" class="absolute z-20 pointer-events-none transition-all duration-700 ease-in-out select-none transform -translate-x-1/2 -translate-y-1/2" style="width: 80px; height: 80px;">
+                    <div class="w-full h-full relative flex items-center justify-center bg-amber-400/90 rounded-2xl shadow-xl border-4 border-white mascot-bounce">
+                        <span class="text-5xl">🦊</span>
+                        <!-- Live Mascot Dress-up Layer -->
+                        <div id="mascot-accessories" class="absolute inset-0 flex items-center justify-center"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dice Roll Controls at bottom (French UI) -->
+            <div class="w-full max-w-lg bg-white/95 rounded-2xl p-5 shadow-xl border-2 border-orange-400 flex flex-col items-center gap-4">
+                <div class="text-center">
+                    <span class="text-xs text-gray-500 font-bold block">Clique sur le bouton ou sur le dé pour avancer Semsem !</span>
+                </div>
+                
+                <div class="flex items-center justify-center gap-8 w-full">
+                    <!-- Virtual Dice View -->
+                    <div id="game-dice" class="w-16 h-16 bg-gradient-to-br from-orange-400 to-amber-500 rounded-2xl flex items-center justify-center text-4xl text-white font-game font-black shadow-lg border-b-4 border-orange-700 select-none cursor-pointer interactive-element transform transition-transform" onclick="rollDice()">
+                        🎲
+                    </div>
+
+                    <!-- Dice Roll action triggers -->
+                    <div class="flex-1">
+                        <button id="roll-btn" onclick="rollDice()" class="w-full py-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-black text-lg rounded-xl border-b-4 border-orange-700 shadow-md interactive-element font-game">
+                            🎲 LANCE LE DÉ !
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WARDROBE SHOP MODAL (French UI) -->
+        <div id="wardrobe-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-4 border-purple-400 relative">
+                <button onclick="toggleWardrobe(false)" class="absolute top-4 right-4 text-gray-500 hover:text-black font-black text-2xl interactive-element">✕</button>
+                
+                <div class="text-center mb-6">
+                    <span class="text-5xl">🎒</span>
+                    <h2 class="text-xl font-black text-purple-700 mt-2 font-game">Le vestiaire de Semsem</h2>
+                    <p class="text-gray-500 text-xs font-bold">Dépense tes étoiles d'or pour personnaliser le look de ton ami Semsem !</p>
+                </div>
+
+                <!-- Wardrobe Items Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <!-- Wizard Hat -->
+                    <div class="border-2 border-purple-200 p-3 rounded-2xl flex flex-col items-center justify-between bg-purple-50 hover:border-purple-400 transition">
+                        <span class="text-4xl mb-1">🧙‍♂️</span>
+                        <span class="text-xs font-bold text-gray-800">Chapeau de Magicien</span>
+                        <span class="text-[11px] text-purple-600 font-extrabold mb-2">⭐ 30 étoiles</span>
+                        <button onclick="buyOrEquip('wizard')" id="btn-item-wizard" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs interactive-element">
+                            Acheter / Porter
+                        </button>
+                    </div>
+                    <!-- Superhero Glasses -->
+                    <div class="border-2 border-purple-200 p-3 rounded-2xl flex flex-col items-center justify-between bg-purple-50 hover:border-purple-400 transition">
+                        <span class="text-4xl mb-1">🕶️</span>
+                        <span class="text-xs font-bold text-gray-800">Masque de Héros</span>
+                        <span class="text-[11px] text-purple-600 font-extrabold mb-2">⭐ 15 étoiles</span>
+                        <button onclick="buyOrEquip('glasses')" id="btn-item-glasses" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs interactive-element">
+                            Acheter / Porter
+                        </button>
+                    </div>
+                    <!-- Golden Crown -->
+                    <div class="border-2 border-purple-200 p-3 rounded-2xl flex flex-col items-center justify-between bg-purple-50 hover:border-purple-400 transition">
+                        <span class="text-4xl mb-1">👑</span>
+                        <span class="text-xs font-bold text-gray-800">Couronne d'Or</span>
+                        <span class="text-[11px] text-purple-600 font-extrabold mb-2">⭐ 50 étoiles</span>
+                        <button onclick="buyOrEquip('crown')" id="btn-item-crown" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs interactive-element">
+                            Acheter / Porter
+                        </button>
+                    </div>
+                    <!-- Magic Shield -->
+                    <div class="border-2 border-purple-200 p-3 rounded-2xl flex flex-col items-center justify-between bg-purple-50 hover:border-purple-400 transition">
+                        <span class="text-4xl mb-1">🛡️</span>
+                        <span class="text-xs font-bold text-gray-800">Bouclier de Protection</span>
+                        <span class="text-[11px] text-purple-600 font-extrabold mb-2">⭐ 25 étoiles</span>
+                        <button onclick="buyOrEquip('shield')" id="btn-item-shield" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs interactive-element">
+                            Acheter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 p-3 rounded-xl flex items-center justify-between">
+                    <span class="text-xs text-gray-600 font-bold">Tes étoiles disponibles :</span>
+                    <span id="shop-coins-counter" class="text-base font-black text-yellow-600 font-game">⭐ 20</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHALLENGE PANEL MODAL (Triggered when landing on tile - French UI, only Arabic words inside cards) -->
+        <div id="challenge-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border-4 border-orange-400 text-center relative" id="challenge-anim-container">
+                
+                <!-- Challenge Icon and Title -->
+                <div id="challenge-header" class="mb-4">
+                    <span id="challenge-icon" class="text-6xl inline-block">🎯</span>
+                    <h3 id="challenge-title" class="text-xl font-black text-orange-600 mt-2 font-game">Défi Magique !</h3>
+                </div>
+
+                <!-- Challenge Content Body -->
+                <div id="challenge-body" class="mb-6 space-y-4 text-gray-700 text-sm">
+                    <!-- Loaded dynamically in French with ARABIC target vocab only -->
+                </div>
+
+                <!-- Modal Action triggers (With teacher controls) -->
+                <div id="challenge-actions" class="flex flex-col gap-2">
+                    <div class="flex gap-2 justify-center mt-4 border-t pt-4">
+                        <button onclick="solveChallenge(true)" class="py-2.5 px-6 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl text-xs shadow-md interactive-element">
+                            ✔ RÉUSSI (Enseignant) <br> <span class="text-[9px] opacity-80">Valider la réussite</span>
+                        </button>
+                        <button onclick="solveChallenge(false)" class="py-2.5 px-6 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-xs shadow-md interactive-element">
+                            ✖ ÉCHEC (Enseignant) <br> <span class="text-[9px] opacity-80">Retourner en arrière</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SOUND SYNTHESIS & GOOGLE TTS FALLBACK SCRIPT ENGINE (Bulletproof for Sandboxed iFrames) -->
+    <script>
+        let audioCtx = null;
+        let activeVoice = null;
+
+        // Initializes native AudioContext on first user interaction
+        function initAudio() {
+            if (!audioCtx) {
+                try {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                    document.getElementById('diagnostic-text').innerText = "Audio: Activé 🔊";
+                    document.getElementById('diagnostic-text').className = "text-[9px] text-green-600 font-bold font-mono";
+                    loadVoices();
+                } catch(e) {
+                    console.error("AudioContext blocked or unsupported", e);
+                    document.getElementById('diagnostic-text').innerText = "Audio: Bloqué ❌";
+                    document.getElementById('diagnostic-text').className = "text-[9px] text-red-500 font-bold font-mono";
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    document.getElementById('diagnostic-text').innerText = "Audio: Débloqué et Prêt ⚡";
+                });
+            }
+        }
+
+        // Asynchronously preload WebSpeech synthesis voices
+        function loadVoices() {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                // Fetch voices immediately
+                findOptimalVoice();
+                // Some browsers load voices asynchronously
+                window.speechSynthesis.onvoiceschanged = () => {
+                    findOptimalVoice();
+                };
+            }
+        }
+
+        // Find premium, natural-sounding native Arabic voice
+        function findOptimalVoice() {
+            if (!window.speechSynthesis) return;
+            const voices = window.speechSynthesis.getVoices();
+            const arVoices = voices.filter(v => v.lang.startsWith('ar'));
+            
+            if (arVoices.length > 0) {
+                // Prioritize Premium / Neural / Natural Online voices
+                const premium = arVoices.find(v => 
+                    v.name.includes('Natural') || 
+                    v.name.includes('Neural') || 
+                    v.name.includes('Online') || 
+                    v.name.includes('Google')
+                );
+                
+                // Prioritize standard pleasant sounding Arabic voices
+                const female = arVoices.find(v => 
+                    v.name.includes('Mouna') || 
+                    v.name.includes('Zeina') || 
+                    v.name.includes('Salma') || 
+                    v.name.includes('Zariyah') ||
+                    v.name.includes('Hoda')
+                );
+
+                activeVoice = premium || female || arVoices[0];
+                console.log("Selected Native Arabic Voice: ", activeVoice.name);
+            }
+        }
+
+        // Formats the word to force elegant Sukun stop (الوقف بالسكون) at the end of isolated words
+        function formatWordForTTS(word) {
+            let clean = word.trim();
+            
+            // Remove final short vowels and tanween from the very end of the string
+            // Diacritics: Fatha (\u064e), Damma (\u064f), Kasra (\u0650), Fathatan (\u064b), Dammatan (\u064c), Kasratan (\u064d)
+            clean = clean.replace(/[\u064b\u064c\u064d\u064e\u064f\u0650]+$/, "");
+            
+            // If word ends with Ta-marbuta (ة), replace it with Ha with Sukun (هْ)
+            // This forces all engines to stop on silent "ah" rather than saying "atun" or "atu"
+            if (clean.endsWith('ة')) {
+                clean = clean.slice(0, -1) + 'هْ';
+            } else if (clean.endsWith('ةً') || clean.endsWith('ةٌ') || clean.endsWith('ةٍ')) {
+                clean = clean.slice(0, -2) + 'هْ';
+            } else {
+                // For other letters, ensure it ends with a Sukun (ْ - \u0652) to stop forcefully on the consonant
+                if (!clean.endsWith('\u0652')) {
+                    clean = clean + '\u0652';
+                }
+            }
+            return clean;
+        }
+
+        // Generate synthetic arcade tones
+        function playTone(freq, volume, duration, shape = 'sine') {
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = shape;
+                osc.frequency.setValueAtTime(freq, now);
+                
+                gain.gain.setValueAtTime(volume, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start(now);
+                osc.stop(now + duration);
+            } catch (e) {
+                console.error("playTone failed", e);
+            }
+        }
+
+        // Play sound effects
+        function playSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+
+            try {
+                if (type === 'hop') {
+                    playTone(320, 0.15, 0.12, 'sine');
+                    setTimeout(() => playTone(640, 0.12, 0.12, 'sine'), 50);
+                } else if (type === 'success') {
+                    playTone(523.25, 0.12, 0.12, 'sine'); // C5
+                    setTimeout(() => playTone(659.25, 0.12, 0.12, 'sine'), 80);  // E5
+                    setTimeout(() => playTone(783.99, 0.12, 0.12, 'sine'), 160); // G5
+                    setTimeout(() => playTone(1046.50, 0.15, 0.25, 'sine'), 240); // C6
+                } else if (type === 'fail') {
+                    playTone(293.66, 0.15, 0.35, 'triangle');
+                    setTimeout(() => playTone(146.83, 0.15, 0.35, 'triangle'), 100);
+                } else if (type === 'trap') {
+                    playTone(260, 0.15, 0.45, 'sawtooth');
+                    setTimeout(() => playTone(70, 0.15, 0.45, 'sawtooth'), 150);
+                } else if (type === 'dice') {
+                    for (let i = 0; i < 6; i++) {
+                        setTimeout(() => {
+                            const freq = 200 + (Math.random() * 300);
+                            playTone(freq, 0.08, 0.08, 'triangle');
+                        }, i * 70);
+                    }
+                }
+            } catch (error) {
+                console.warn("Audio play failed", error);
+            }
+        }
+
+        // Bulletproof TTS Speak implementation using Google Translate TTS via native HTML5 Audio
+        function playWordAudioSim(word) {
+            initAudio();
+            
+            // Format word with pure Classical Arabic rules ending in Sukun
+            const speechWord = formatWordForTTS(word);
+            console.log("Speaking (Pristine Classical Stop):", speechWord);
+
+            // 1. Play high-quality Google TTS using 'client=tw-ob' parameter (bypasses sandbox & referrer checks)
+            const ttsAudio = document.getElementById('tts-audio');
+            if (ttsAudio) {
+                try {
+                    const googleTtsUrl = "https://translate.google.com/translate_tts?ie=UTF-8&tl=ar&client=tw-ob&q=" + encodeURIComponent(speechWord);
+                    
+                    ttsAudio.src = googleTtsUrl;
+                    ttsAudio.load();
+                    
+                    const playPromise = ttsAudio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.warn("Google TTS failed, falling back to Web Speech Synthesis", error);
+                            // 2. Secondary fallback: Web Speech API synthesis
+                            speakSpeechSynthesis(speechWord);
+                        });
+                    }
+                } catch(e) {
+                    console.warn("Audio node setup failed", e);
+                    speakSpeechSynthesis(speechWord);
+                }
+            } else {
+                speakSpeechSynthesis(speechWord);
+            }
+
+            // 3. Play matching synth background signature effect to keep Ilyas excited
+            playWordSynthSignature(word);
+        }
+
+        // Fallback speech synthesis using native SpeechSynthesis
+        function speakSpeechSynthesis(text) {
+            if (!('speechSynthesis' in window)) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ar-SA';
+                utterance.rate = 0.65; // Friendly slow pace
+                utterance.pitch = 1.15; // Natural warm pitch
+
+                if (!activeVoice) {
+                    findOptimalVoice();
+                }
+                if (activeVoice) {
+                    utterance.voice = activeVoice;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            } catch (err) {
+                console.warn("Speech synthesis error", err);
+            }
+        }
+
+        // Custom electronic cartoon signatures for fallback / sensory engagement
+        function playWordSynthSignature(word) {
+            const norm = word.trim().replace(/[َُِّْ]/g, ""); 
+            
+            if (norm.includes("كرة")) {
+                // Ballon bounce
+                const bounces = [0, 100, 180, 250];
+                bounces.forEach((time, index) => {
+                    setTimeout(() => playTone(450 - (index * 40), 0.1, 0.08, 'sine'), time);
+                });
+            } else if (norm.includes("دمية")) {
+                // Cute melodic chords
+                const notes = [523.25, 659.25, 783.99];
+                notes.forEach((f, i) => {
+                    setTimeout(() => playTone(f, 0.08, 0.2, 'sine'), i * 100);
+                });
+            } else if (norm.includes("سيارة")) {
+                // Engine acceleration
+                playTone(100, 0.1, 0.15, 'sawtooth');
+                setTimeout(() => playTone(220, 0.08, 0.25, 'sawtooth'), 120);
+            } else if (norm.includes("قطار")) {
+                // Train whistle
+                playTone(330, 0.08, 0.2, 'triangle');
+                playTone(392, 0.06, 0.2, 'triangle');
+            } else if (norm.includes("طائرة")) {
+                // Jet take-off
+                playTone(150, 0.1, 0.4, 'sine');
+                setTimeout(() => playTone(550, 0.08, 0.4, 'sine'), 100);
+            } else {
+                // Sparkling stars
+                [600, 800, 1000].forEach((f, i) => {
+                    setTimeout(() => playTone(f, 0.06, 0.1, 'sine'), i * 80);
+                });
+            }
+        }
+
+        // Audio activation handler
+        function manuallyUnlockAudio() {
+            initAudio();
+            
+            // Play physical chime
+            playTone(523.25, 0.12, 0.15, 'sine'); 
+            setTimeout(() => playTone(659.25, 0.12, 0.25, 'sine'), 100);
+
+            // Trigger welcome greeting via Google TTS
+            playWordAudioSim("أَهْلاً وَسَهْلاً يَا إِلْيَاسْ");
+
+            // Visually update the unlock button to confirm success
+            const unlockBtn = document.getElementById('audio-unlock-btn');
+            if (unlockBtn) {
+                unlockBtn.className = "bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-md text-xs interactive-element flex items-center gap-2 border-b-4 border-green-700";
+                unlockBtn.innerHTML = "<span>🔊 SON ACTIVÉ AVEC SUCCÈS !</span>";
+                unlockBtn.classList.remove('animate-pulse');
+            }
+        }
+
+        // Global activation trigger
+        function silentGlobalUnlock() {
+            initAudio();
+            document.removeEventListener('click', silentGlobalUnlock);
+            document.removeEventListener('touchstart', silentGlobalUnlock);
+        }
+        document.addEventListener('click', silentGlobalUnlock);
+        document.addEventListener('touchstart', silentGlobalUnlock);
+    </script>
+
+    <!-- PRIMARY GAME ENGINE AND BOARD SETUP LOGIC (All UI strings in French, targets in Arabic) -->
+    <script>
+        // Target arabic vocab from "أحب العربية" with french meanings and phonetics for Ilyas
+        const PRESETS = {
+            toys: [
+                { word: "كُرَة", pic: "⚽", fr: "Un ballon", ph: "Ko-rah" },
+                { word: "دُمْيَة", pic: "🪆", fr: "Une poupée", ph: "Doum-yah" },
+                { word: "سَيَّارَة", pic: "🚗", fr: "Une voiture", ph: "Say-ya-rah" },
+                { word: "قِطَار", pic: "🚂", fr: "Un train", ph: "Qi-tar" },
+                { word: "طَائِرَة", pic: "✈️", fr: "Un avion", ph: "Ta-yi-rah" }
+            ],
+            animals: [
+                { word: "أَرْنَب", pic: "🐰", fr: "Un lapin", ph: "Ar-nab" },
+                { word: "أَسَد", pic: "🦁", fr: "Un lion", ph: "A-sad" },
+                { word: "قِطَّة", pic: "🐱", fr: "Un chat", ph: "Qit-tah" },
+                { word: "كَلْب", pic: "🐶", fr: "Un chien", ph: "Kalb" },
+                { word: "عُصْفُور", pic: "🐦", fr: "Un oiseau", ph: "Ous-four" }
+            ],
+            fruits: [
+                { word: "مَوْز", pic: "🍌", fr: "Une banane", ph: "Mawz" },
+                { word: "تُفَّاح", pic: "🍎", fr: "Une pomme", ph: "Touf-fah" },
+                { word: "بُرْتُقَال", pic: "🍊", fr: "Une orange", ph: "Bour-tou-qal" },
+                { word: "عِنَب", pic: "🍇", fr: "Du raisin", ph: "In-ab" },
+                { word: "فَرَاوِلَة", pic: "🍓", fr: "Une fraise", ph: "Fa-raw-i-lah" }
+            ]
+        };
+
+        let gameState = {
+            theme: 'candy',
+            activeWords: [],
+            skill: 'pronounce',
+            currentTile: 0,
+            coins: 20, 
+            hasShield: false,
+            inventory: [],
+            equipped: [],
+            isMoving: false
+        };
+
+        const SHOP_ITEMS = {
+            wizard: { name: "Chapeau Magique", cost: 30, icon: "🧙‍♂️", style: "top: -40px; font-size: 2.2rem;" },
+            glasses: { name: "Masque de Héros", cost: 15, icon: "🕶️", style: "top: 0px; font-size: 1.5rem;" },
+            crown: { name: "Couronne d'Or", cost: 50, icon: "👑", style: "top: -45px; font-size: 2.5rem;" },
+            shield: { name: "Bouclier Magique", cost: 25, icon: "🛡️" }
+        };
+
+        // Board Path Setup definition (12 Tiles winding shape - French UI labels)
+        const PATH_BLUEPRINT = [
+            { type: 'start', title: 'Départ 🏁', color: 'from-blue-400 to-sky-300' },
+            { type: 'challenge', wordIdx: 0, title: 'Défi 1 🧩', color: 'from-amber-400 to-yellow-300' },
+            { type: 'shortcut', title: 'Portail 🌀', color: 'from-emerald-400 to-teal-300' },
+            { type: 'challenge', wordIdx: 1, title: 'Défi 2 🧩', color: 'from-amber-400 to-yellow-300' },
+            { type: 'gravity', title: 'Zone Gravité 🚀', color: 'from-purple-500 to-indigo-400' },
+            { type: 'challenge', wordIdx: 2, title: 'Défi 3 🧩', color: 'from-amber-400 to-yellow-300' },
+            { type: 'trap', title: 'Piège Banane 🍌', color: 'from-red-500 to-orange-400' },
+            { type: 'challenge', wordIdx: 3, title: 'Défi 4 🧩', color: 'from-amber-400 to-yellow-300' },
+            { type: 'mystery', title: 'Coffre Mystère 🎁', color: 'from-pink-400 to-rose-300' },
+            { type: 'challenge', wordIdx: 4, title: 'Défi 5 🧩', color: 'from-amber-400 to-yellow-300' },
+            { type: 'shortcut', title: 'Portail 🌀', color: 'from-emerald-400 to-teal-300' },
+            { type: 'goal', title: 'Le Trésor ! 🏆', color: 'from-yellow-500 to-amber-300' }
+        ];
+
+        window.onload = function() {
+            loadPresetWords('toys'); 
+        };
+
+        // Load presets dynamically with French descriptions
+        function loadPresetWords(val) {
+            const container = document.getElementById('words-inputs-container');
+            container.innerHTML = '';
+            
+            if (val === 'custom') {
+                const frPlaceholders = ["Balle", "Poupée", "Voiture", "Train", "Avion"];
+                const customPhonetics = ["Kora", "Dumya", "Sayara", "Qitar", "Tayara"];
+                for (let i = 0; i < 5; i++) {
+                    container.innerHTML += `
+                        <div class="flex flex-col gap-1">
+                            <input type="text" id="custom-word-${i}" placeholder="Mot Arabe ${i+1}" class="p-2 border-2 rounded-xl text-center font-bold text-gray-700 bg-white shadow-sm focus:outline-orange-400 text-xs">
+                            <input type="text" id="custom-word-fr-${i}" placeholder="En Français" value="${frPlaceholders[i]}" class="p-1 border rounded-lg text-center text-gray-500 bg-gray-50 text-[10px]">
+                            <input type="hidden" id="custom-word-ph-${i}" value="${customPhonetics[i]}">
+                        </div>`;
+                }
+            } else {
+                const words = PRESETS[val];
+                words.forEach((w) => {
+                    container.innerHTML += `
+                        <div class="bg-white border-2 border-amber-300 rounded-xl p-2 text-center shadow-sm flex flex-col items-center">
+                            <span class="text-2xl block">${w.pic}</span>
+                            <span class="text-xs font-black text-purple-600 font-arabic">${w.word}</span>
+                            <span class="text-[9px] text-gray-500 font-bold">${w.fr}</span>
+                        </div>`;
+                });
+            }
+        }
+
+        function selectTheme(themeId, btn) {
+            initAudio();
+            gameState.theme = themeId;
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active-theme', 'border-pink-400', 'border-green-400', 'border-indigo-400'));
+            const borderCol = themeId === 'candy' ? 'border-pink-400' : themeId === 'forest' ? 'border-green-400' : 'border-indigo-400';
+            btn.classList.add('active-theme', borderCol);
+            playSound('hop');
+        }
+
+        function selectSkill(skillId, btn) {
+            initAudio();
+            gameState.skill = skillId;
+            document.querySelectorAll('.skill-btn').forEach(b => b.classList.remove('active-skill', 'border-orange-400', 'border-blue-400'));
+            const borderCol = skillId === 'pronounce' ? 'border-orange-400' : 'border-blue-400';
+            btn.classList.add('active-skill', borderCol);
+            playSound('hop');
+        }
+
+        // Start Adventure Transition
+        function startAdventure() {
+            initAudio();
+            const presetVal = document.getElementById('lesson-preset').value;
+            gameState.activeWords = [];
+
+            if (presetVal === 'custom') {
+                const customPics = ['🌟', '💎', '🎨', '🚀', '🎁'];
+                for (let i = 0; i < 5; i++) {
+                    const val = document.getElementById(`custom-word-${i}`).value.trim();
+                    const valFr = document.getElementById(`custom-word-fr-${i}`).value.trim() || "Traduction";
+                    const valPh = document.getElementById(`custom-word-ph-${i}`).value.trim() || "Kora";
+                    if (!val) {
+                        document.getElementById(`custom-word-${i}`).classList.add('border-red-500');
+                        document.getElementById(`custom-word-${i}`).focus();
+                        return;
+                    }
+                    gameState.activeWords.push({ word: val, pic: customPics[i], fr: valFr, ph: valPh });
+                }
+            } else {
+                gameState.activeWords = [...PRESETS[presetVal]];
+            }
+
+            // Visual Theme configuration
+            applyThemeBackground();
+
+            // Render Board
+            renderGameBoard();
+
+            // Screen transition
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+
+            // Reset Semsem position
+            gameState.currentTile = 0;
+            updateMascotPosition(false);
+            updateStatsBar();
+            playSound('success');
+        }
+
+        function applyThemeBackground() {
+            const body = document.body;
+            if (gameState.theme === 'candy') {
+                body.style.background = "radial-gradient(circle, #ffeedd 0%, #ffdfbf 100%)";
+            } else if (gameState.theme === 'forest') {
+                body.style.background = "radial-gradient(circle, #e6ffed 0%, #ccffd8 100%)";
+            } else {
+                body.style.background = "radial-gradient(circle, #ece9ff 0%, #d8d3ff 100%)";
+            }
+        }
+
+        // Render Board Path (Only target words in Arabic, layout labels in French)
+        function renderGameBoard() {
+            const pathContainer = document.getElementById('board-path');
+            pathContainer.innerHTML = '';
+
+            PATH_BLUEPRINT.forEach((tile, index) => {
+                let emoji = '🧩';
+                let label = tile.title;
+                let frLabel = "";
+                
+                if (tile.type === 'start') {
+                    emoji = '🏁';
+                    label = 'DÉPART';
+                } else if (tile.type === 'goal') {
+                    emoji = '🏆';
+                    label = 'TRÉSOR !';
+                } else if (tile.type === 'shortcut') {
+                    emoji = '🌀';
+                    label = 'Super Portail';
+                } else if (tile.type === 'gravity') {
+                    emoji = '🚀';
+                    label = 'Gravité';
+                } else if (tile.type === 'trap') {
+                    emoji = '🍌';
+                    label = 'Piège !';
+                } else if (tile.type === 'mystery') {
+                    emoji = '🎁';
+                    label = 'Mystère';
+                } else if (tile.type === 'challenge') {
+                    const item = gameState.activeWords[tile.wordIdx];
+                    if (item) {
+                        emoji = item.pic;
+                        if (gameState.skill === 'listening') {
+                            label = "Écoute !";
+                        } else {
+                            label = item.word; // Core learning word in Arabic
+                            frLabel = item.fr; // French translation helper
+                        }
+                    }
+                }
+
+                pathContainer.innerHTML += `
+                    <div id="tile-${index}" class="board-tile bg-gradient-to-tr ${tile.color} p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-lg border-2 border-white/60 aspect-square select-none interactive-element">
+                        <span class="text-4xl filter drop-shadow mb-1">${emoji}</span>
+                        <span class="${tile.type === 'challenge' && gameState.skill !== 'listening' ? 'font-arabic font-black text-purple-800 text-sm' : 'font-game text-xs text-gray-800'} leading-tight">${label}</span>
+                        ${frLabel ? `<span class="text-[9px] text-gray-500 font-bold leading-none mt-0.5">${frLabel}</span>` : ''}
+                        <span class="mt-1 bg-white/40 px-2 py-0.5 rounded-full text-[9px] font-bold text-gray-700">Case ${index + 1}</span>
+                    </div>`;
+            });
+        }
+
+        // Visual position updates for Semsem
+        function updateMascotPosition(animate = true) {
+            const targetTileElement = document.getElementById(`tile-${gameState.currentTile}`);
+            const mascot = document.getElementById('mascot-token');
+            
+            if (targetTileElement && mascot) {
+                const boardRect = document.getElementById('game-board-container').getBoundingClientRect();
+                const tileRect = targetTileElement.getBoundingClientRect();
+                
+                const targetX = tileRect.left - boardRect.left + (tileRect.width / 2);
+                const targetY = tileRect.top - boardRect.top + (tileRect.height / 2);
+
+                mascot.style.left = `${targetX}px`;
+                mascot.style.top = `${targetY}px`;
+            }
+        }
+
+        // Stats updates in French
+        function updateStatsBar() {
+            document.getElementById('coin-counter').innerText = gameState.coins;
+            document.getElementById('shop-coins-counter').innerText = `⭐ ${gameState.coins}`;
+
+            const badge = document.getElementById('shield-badge');
+            const status = document.getElementById('shield-status');
+            if (gameState.hasShield) {
+                badge.classList.remove('opacity-40');
+                badge.classList.add('opacity-100');
+                status.innerText = "Activé 🛡️";
+            } else {
+                badge.classList.remove('opacity-100');
+                badge.classList.add('opacity-40');
+                status.innerText = "Désactivé";
+            }
+        }
+
+        // Dice rolling logic
+        function rollDice() {
+            if (gameState.isMoving) return;
+            initAudio();
+            playSound('dice');
+
+            gameState.isMoving = true;
+            const diceEl = document.getElementById('game-dice');
+            const rollBtn = document.getElementById('roll-btn');
+            rollBtn.disabled = true;
+
+            let rollsCount = 0;
+            const diceFaces = ['🎲', '1️⃣', '2️⃣', '3️⃣', '4️⃣']; 
+            
+            const rollInterval = setInterval(() => {
+                const randomVal = Math.floor(Math.random() * 4) + 1; 
+                diceEl.innerText = diceFaces[randomVal];
+                rollsCount++;
+                
+                if (rollsCount > 10) {
+                    clearInterval(rollInterval);
+                    const finalRollValue = Math.floor(Math.random() * 4) + 1;
+                    diceEl.innerText = diceFaces[finalRollValue];
+                    
+                    setTimeout(() => {
+                        moveMascotBySteps(finalRollValue);
+                    }, 500);
+                }
+            }, 80);
+        }
+
+        // Mascot step movement
+        function moveMascotBySteps(steps) {
+            let stepCounter = 0;
+            
+            function stepOnce() {
+                if (stepCounter < steps) {
+                    if (gameState.currentTile < PATH_BLUEPRINT.length - 1) {
+                        gameState.currentTile++;
+                        playSound('hop');
+                        updateMascotPosition(true);
+                        stepCounter++;
+                        setTimeout(stepOnce, 500);
+                    } else {
+                        triggerTargetTileEffect();
+                    }
+                } else {
+                    triggerTargetTileEffect();
+                }
+            }
+            stepOnce();
+        }
+
+        // Land on tile trigger
+        function triggerTargetTileEffect() {
+            gameState.isMoving = false;
+            document.getElementById('roll-btn').disabled = false;
+
+            const tile = PATH_BLUEPRINT[gameState.currentTile];
+
+            if (tile.type === 'start') {
+                // Nothing
+            } else if (tile.type === 'goal') {
+                triggerVictorySequence();
+            } else if (tile.type === 'shortcut') {
+                triggerPortalEvent();
+            } else if (tile.type === 'trap') {
+                triggerTrapEvent();
+            } else if (tile.type === 'gravity') {
+                triggerGravityEvent();
+            } else if (tile.type === 'mystery') {
+                triggerMysteryEvent();
+            } else if (tile.type === 'challenge') {
+                triggerChallengeEvent(tile.wordIdx);
+            }
+        }
+
+        // Portal Event (All French)
+        function triggerPortalEvent() {
+            showChallengeModal(
+                '🌀 Super Portail Magique !', 
+                'Tu as trouvé un portail d\'énergie ! Pour aider Semsem à faire un grand bond de 3 cases en avant, relève ce petit défi avec ton enseignant :', 
+                `
+                <div class="flex flex-col items-center gap-4">
+                    <span class="text-6xl animate-spin">🌀</span>
+                    <p class="font-bold text-gray-700 text-sm">Dis la formule magique suivante avec une voix super rigolote :</p>
+                    <div class="bg-indigo-100 p-4 rounded-2xl border-4 border-indigo-400">
+                        <span class="text-3xl font-black text-indigo-700 font-arabic">${gameState.activeWords[0].word}</span>
+                        <span class="text-sm font-bold text-gray-500 block font-mono">Comment prononcer : "${gameState.activeWords[0].ph}"</span>
+                        <span class="text-xs text-gray-500 block mt-1">Signification : ${gameState.activeWords[0].fr}</span>
+                    </div>
+                </div>
+                `, 
+                'portal'
+            );
+        }
+
+        // Trap Event (All French)
+        function triggerTrapEvent() {
+            playSound('trap');
+            if (gameState.hasShield) {
+                gameState.hasShield = false;
+                updateStatsBar();
+                showChallengeModal(
+                    '🛡️ Bouclier protecteur activé !', 
+                    'Ouf ! Semsem a failli glisser sur une peau de banane, mais ton super bouclier magique l\'a protégé !', 
+                    `
+                    <div class="flex flex-col items-center gap-4">
+                        <span class="text-6xl animate-bounce">🛡️</span>
+                        <p class="font-bold text-green-600 text-sm">Le bouclier s'est brisé pour te protéger, mais tu restes sur ta case sans reculer !</p>
+                    </div>
+                    `, 
+                    'shield_safe'
+                );
+            } else {
+                showChallengeModal(
+                    '🍌 Piège de la Banane Glissante !', 
+                    'Oh non ! Semsem a glissé ! Pour éviter de glisser et reculer de 2 cases, réussis vite ce défi de sauvetage :', 
+                    `
+                    <div class="flex flex-col items-center gap-4 text-center">
+                        <span class="text-6xl animate-pulse">🍌</span>
+                        <p class="font-bold text-red-600 text-sm">Prononce vite ce mot arabe pour retenir Semsem !</p>
+                        <div class="bg-red-100 p-4 rounded-2xl border-4 border-red-400">
+                            <span class="text-3xl font-black text-red-700 font-arabic">${gameState.activeWords[1].word}</span>
+                            <span class="text-sm font-bold text-gray-500 block font-mono">(${gameState.activeWords[1].ph}) - ${gameState.activeWords[1].fr}</span>
+                        </div>
+                    </div>
+                    `, 
+                    'trap_save'
+                );
+            }
+        }
+
+        // Gravity Jump physical event (All French)
+        function triggerGravityEvent() {
+            showChallengeModal(
+                '🚀 Zone sans Gravité !', 
+                'Semsem flotte dans les airs ! Pour l\'aider à allumer son propulseur, lève-toi et fais 3 beaux sauts devant la caméra !', 
+                `
+                <div class="flex flex-col items-center gap-4">
+                    <span class="text-6xl animate-bounce" style="animation-duration: 1.5s;">🚀</span>
+                    <div class="text-base font-black text-purple-700">Sauts physiques enregistrés :</div>
+                    <div class="flex gap-2" id="jump-counter-container">
+                        <span class="text-2xl opacity-30">⭐</span>
+                        <span class="text-2xl opacity-30">⭐</span>
+                        <span class="text-2xl opacity-30">⭐</span>
+                    </div>
+                    <button onclick="registerPhysicalJump()" class="py-2 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs interactive-element shadow-md">
+                        🏃‍♂️ J'ai fait un saut !
+                    </button>
+                </div>
+                `, 
+                'gravity'
+            );
+            jumpCount = 0;
+        }
+
+        let jumpCount = 0;
+        function registerPhysicalJump() {
+            playSound('hop');
+            jumpCount++;
+            const stars = document.getElementById('jump-counter-container').children;
+            if (stars[jumpCount - 1]) {
+                stars[jumpCount - 1].classList.remove('opacity-30');
+                stars[jumpCount - 1].classList.add('opacity-100', 'scale-125');
+            }
+            if (jumpCount >= 3) {
+                setTimeout(() => {
+                    solveChallenge(true);
+                }, 400);
+            }
+        }
+
+        // Mystery Chest Event (All French)
+        function triggerMysteryEvent() {
+            showChallengeModal(
+                '🎁 Le Coffre Mystère !', 
+                'Quelle chance ! Tu as trouvé un coffre magique. Voyons ce qui se cache à l\'intérieur !', 
+                `
+                <div class="flex flex-col items-center gap-4">
+                    <div class="w-24 h-24 bg-rose-100 rounded-3xl border-4 border-rose-400 flex items-center justify-center text-5xl animate-bounce">
+                        🎁
+                    </div>
+                    <button onclick="spinMysteryChestWheel()" class="py-3 px-8 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-2xl shadow interactive-element text-sm font-game">
+                        🎡 OUVRIR LE COFFRE !
+                    </button>
+                </div>
+                `, 
+                'mystery_spin'
+            );
+        }
+
+        function spinMysteryChestWheel() {
+            playSound('dice');
+            const outcomes = [
+                { title: '⭐ Tu as gagné 20 Étoiles d\'Or !', run: () => { gameState.coins += 20; playSound('success'); } },
+                { title: '🛡️ Tu as gagné un Bouclier Protecteur !', run: () => { gameState.hasShield = true; playSound('success'); } },
+                { title: '⭐ Tu as gagné 10 Étoiles d\'Or !', run: () => { gameState.coins += 10; playSound('success'); } }
+            ];
+            const chosen = outcomes[Math.floor(Math.random() * outcomes.length)];
+            chosen.run();
+            updateStatsBar();
+
+            showChallengeModal(
+                '🎁 Résultats du Coffre !', 
+                chosen.title, 
+                `
+                <div class="flex flex-col items-center gap-4">
+                    <span class="text-7xl">🎉</span>
+                    <p class="font-bold text-gray-800 text-sm">Le cadeau a été ajouté à tes statistiques !</p>
+                </div>
+                `, 
+                'mystery_result'
+            );
+        }
+
+        // Main Vocabulary Challenge cards (French instructions, ARABIC only in challenge cards)
+        function triggerChallengeEvent(wordIdx) {
+            const item = gameState.activeWords[wordIdx];
+            if (!item) return;
+
+            let bodyHtml = '';
+            
+            if (gameState.skill === 'pronounce') {
+                // Pronunciation Quest
+                bodyHtml = `
+                    <div class="flex flex-col items-center gap-4">
+                        <span class="text-7xl animate-pulse">${item.pic}</span>
+                        <div class="text-xs text-gray-500 font-bold text-center">Écoute bien la prononciation correcte puis répète à voix haute :</div>
+                        
+                        <div class="bg-amber-100 px-6 py-4 rounded-3xl border-4 border-amber-400 shadow-inner text-center">
+                            <!-- ARABIC TARGET WORD ONLY -->
+                            <span class="text-4xl font-black text-amber-700 font-arabic">${item.word}</span>
+                            <span class="text-xs font-bold text-purple-600 block mt-1">Phonétique : "${item.ph}"</span>
+                            <span class="text-xs text-gray-500 block">Français : ${item.fr}</span>
+                        </div>
+
+                        <div class="flex flex-col gap-2 w-full max-w-xs mt-2">
+                            <button onclick="playWordAudioSim('${item.word}')" class="py-2 px-4 bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-orange-300">
+                                🔊 Écouter la prononciation
+                            </button>
+                            <button onclick="simulateAudioCapture()" class="py-3 px-6 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-2xl shadow-md interactive-element text-sm flex items-center justify-center gap-2 font-game">
+                                🎙️ ENREGISTRER MA VOIX !
+                            </button>
+                        </div>
+                        
+                        <!-- Visual sound-meter simulation -->
+                        <div id="mic-status" class="hidden w-full bg-gray-100 h-4 rounded-full overflow-hidden relative">
+                            <div id="mic-meter" class="h-full bg-green-500 w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>`;
+                
+                // Speak the word on load of the challenge so the child hears it!
+                setTimeout(() => { playWordAudioSim(item.word); }, 600);
+            } else {
+                // Listening & Recognition Challenge (Hiding the text to force Listening!)
+                const options = [...gameState.activeWords];
+                options.sort(() => Math.random() - 0.5);
+
+                bodyHtml = `
+                    <div class="flex flex-col items-center gap-4 w-full">
+                        <div class="text-xs text-gray-500 font-bold text-center">Clique sur le gros haut-parleur pour écouter le mot arabe, puis choisis la bonne image !</div>
+                        
+                        <!-- Giant Speaker button -->
+                        <button onclick="playWordAudioSim('${item.word}')" class="p-5 bg-gradient-to-tr from-blue-500 to-sky-400 text-white rounded-full shadow-lg border-4 border-white interactive-element animate-pulse">
+                            <span class="text-4xl">🔊</span>
+                            <span class="block text-[10px] mt-1 font-bold font-game">RÉÉCOUTER</span>
+                        </button>
+
+                        <div class="grid grid-cols-2 gap-3 w-full max-w-sm mt-3">
+                            ${options.map(opt => `
+                                <button onclick="checkSelectionChallenge('${opt.word}', '${item.word}')" class="py-4 px-2 bg-white hover:bg-blue-50 border-2 border-gray-200 rounded-2xl flex flex-col items-center gap-2 shadow interactive-element">
+                                    <span class="text-4xl">${opt.pic}</span>
+                                    <span class="text-xs font-bold text-purple-600 font-mono">${opt.ph}</span>
+                                    <span class="text-[10px] text-gray-400">${opt.fr}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                
+                // Speak the word on load so the child is welcomed with the sound!
+                setTimeout(() => { playWordAudioSim(item.word); }, 600);
+            }
+
+            showChallengeModal(
+                `🎯 Défi de Vocabulaire !`, 
+                'Aide ton ami Semsem à résoudre ce défi pour gagner des Étoiles d\'Or et avancer !', 
+                bodyHtml, 
+                'vocab'
+            );
+        }
+
+        // Check selected answer
+        function checkSelectionChallenge(selected, correct) {
+            if (selected === correct) {
+                playSound('success');
+                gameState.coins += 15; 
+                updateStatsBar();
+                showSuccessAnimation();
+                setTimeout(() => {
+                    solveChallenge(true);
+                }, 1000);
+            } else {
+                playSound('fail');
+                showChallengeModal(
+                    '❌ Oups, réessaie !', 
+                    'Ce n\'est pas la bonne image. Écoute à nouveau le mot arabe et regarde bien tes options !', 
+                    `
+                    <div class="flex flex-col items-center gap-4">
+                        <span class="text-6xl">💡</span>
+                        <p class="font-bold text-gray-700 text-sm text-center">Prends ton temps, réécoute le son et tente une nouvelle réponse !</p>
+                    </div>
+                    `, 
+                    'failed_retry'
+                );
+            }
+        }
+
+        // Simulate voice capture sequence
+        function simulateAudioCapture() {
+            playSound('hop');
+            const meterContainer = document.getElementById('mic-status');
+            const meter = document.getElementById('mic-meter');
+            meterContainer.classList.remove('hidden');
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 25;
+                meter.style.width = `${progress}%`;
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    playSound('success');
+                    gameState.coins += 10; 
+                    updateStatsBar();
+                    showSuccessAnimation();
+                    setTimeout(() => {
+                        solveChallenge(true);
+                    }, 1000);
+                }
+            }, 300);
+        }
+
+        // Modal triggers
+        function showChallengeModal(title, text, bodyHtml, challengeType) {
+            document.getElementById('challenge-title').innerHTML = title;
+            document.getElementById('challenge-body').innerHTML = `
+                <p class="text-xs text-gray-400 font-bold mb-4">${text}</p>
+                ${bodyHtml}
+            `;
+            
+            const header = document.getElementById('challenge-header');
+            const icon = document.getElementById('challenge-icon');
+            
+            if (challengeType === 'portal') {
+                icon.innerText = '🌀';
+                header.className = 'text-indigo-500';
+            } else if (challengeType === 'trap') {
+                icon.innerText = '🍌';
+                header.className = 'text-red-500';
+            } else if (challengeType === 'gravity') {
+                icon.innerText = '🚀';
+                header.className = 'text-purple-500';
+            } else {
+                icon.innerText = '🎯';
+                header.className = 'text-orange-500';
+            }
+
+            // Trigger slight bounce animation upon show
+            const animBox = document.getElementById('challenge-anim-container');
+            if (animBox) {
+                animBox.classList.add('shake');
+                setTimeout(() => animBox.classList.remove('shake'), 600);
+            }
+
+            document.getElementById('challenge-modal').classList.remove('hidden');
+        }
+
+        function closeChallengeModal() {
+            document.getElementById('challenge-modal').classList.add('hidden');
+        }
+
+        // Solve current challenge outcomes
+        function solveChallenge(isSuccess) {
+            closeChallengeModal();
+            if (isSuccess) {
+                const tile = PATH_BLUEPRINT[gameState.currentTile];
+                if (tile && tile.type === 'shortcut') {
+                    moveMascotBySteps(3); 
+                }
+            } else {
+                const tile = PATH_BLUEPRINT[gameState.currentTile];
+                if (tile && tile.type === 'trap') {
+                    let target = gameState.currentTile - 2;
+                    if (target < 0) target = 0;
+                    gameState.currentTile = target;
+                    updateMascotPosition(true);
+                }
+            }
+        }
+
+        // Confetti Burst Victory animation triggers
+        function showSuccessAnimation() {
+            for (let i = 0; i < 30; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = `${Math.random() * 100}vw`;
+                conf.style.top = `-10px`;
+                conf.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                conf.style.animationDuration = `${Math.random() * 2 + 1}s`;
+                conf.style.animationDelay = `${Math.random() * 0.5}s`;
+                document.body.appendChild(conf);
+                
+                setTimeout(() => conf.remove(), 3000);
+            }
+        }
+
+        // Victory sequence reached (Goal reached!)
+        function triggerVictorySequence() {
+            playSound('success');
+            showSuccessAnimation();
+            
+            showChallengeModal(
+                '🏆 Félicitations Ilyas ! Tu as gagné !', 
+                'Tu as aidé ton ami Semsem à atteindre le grand trésor de l\'île des mots magiques !', 
+                `
+                <div class="flex flex-col items-center gap-4">
+                    <span class="text-8xl animate-bounce">👑🦊🏆</span>
+                    <p class="font-black text-green-600 text-lg text-center">Tu es un incroyable champion de langue arabe !</p>
+                    <p class="text-xs text-gray-500 font-bold text-center">Rejoue pour tester un autre thème ou va habiller Semsem dans le vestiaire !</p>
+                    <button onclick="returnToSetup()" class="py-3 px-8 bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-black rounded-2xl shadow-md interactive-element text-base mt-2 font-game">
+                        🎮 REJOUER !
+                    </button>
+                </div>
+                `, 
+                'victory'
+            );
+        }
+
+        function returnToSetup() {
+            closeChallengeModal();
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }
+
+        // Avatar customization closet modal control actions
+        function toggleWardrobe(show) {
+            playSound('hop');
+            const modal = document.getElementById('wardrobe-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+                updateWardrobeUI();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function updateWardrobeUI() {
+            document.getElementById('shop-coins-counter').innerText = `⭐ ${gameState.coins}`;
+
+            Object.keys(SHOP_ITEMS).forEach(itemId => {
+                const btn = document.getElementById(`btn-item-${itemId}`);
+                if (!btn) return;
+
+                if (itemId === 'shield') {
+                    btn.innerText = gameState.hasShield ? "Activé 🛡️" : `Acheter (${SHOP_ITEMS.shield.cost} ⭐)`;
+                    btn.disabled = gameState.hasShield;
+                    return;
+                }
+
+                if (gameState.inventory.includes(itemId)) {
+                    if (gameState.equipped.includes(itemId)) {
+                        btn.innerText = "Enlever";
+                        btn.className = "w-full py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg text-xs interactive-element";
+                    } else {
+                        btn.innerText = "Porter";
+                        btn.className = "w-full py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-xs interactive-element";
+                    }
+                } else {
+                    btn.innerText = `Acheter (${SHOP_ITEMS[itemId].cost} ⭐)`;
+                    btn.className = "w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs interactive-element";
+                }
+            });
+        }
+
+        function buyOrEquip(itemId) {
+            playSound('hop');
+            
+            if (itemId === 'shield') {
+                if (gameState.coins >= SHOP_ITEMS.shield.cost) {
+                    gameState.coins -= SHOP_ITEMS.shield.cost;
+                    gameState.hasShield = true;
+                    playSound('success');
+                } else {
+                    playSound('fail');
+                }
+                updateStatsBar();
+                updateWardrobeUI();
+                return;
+            }
+
+            if (gameState.inventory.includes(itemId)) {
+                if (gameState.equipped.includes(itemId)) {
+                    gameState.equipped = gameState.equipped.filter(id => id !== itemId);
+                } else {
+                    gameState.equipped.push(itemId);
+                }
+            } else {
+                const cost = SHOP_ITEMS[itemId].cost;
+                if (gameState.coins >= cost) {
+                    gameState.coins -= cost;
+                    gameState.inventory.push(itemId);
+                    gameState.equipped.push(itemId);
+                    playSound('success');
+                } else {
+                    playSound('fail');
+                }
+            }
+
+            renderMascotAccessories();
+            updateStatsBar();
+            updateWardrobeUI();
+        }
+
+        // Render equipped items
+        function renderMascotAccessories() {
+            const container = document.getElementById('mascot-accessories');
+            const miniContainer = document.getElementById('mini-avatar-accessories');
+            
+            container.innerHTML = '';
+            miniContainer.innerHTML = '';
+
+            gameState.equipped.forEach(itemId => {
+                const item = SHOP_ITEMS[itemId];
+                if (item) {
+                    container.innerHTML += `
+                        <span class="absolute pointer-events-none filter drop-shadow animate-pulse" style="${item.style}">
+                            ${item.icon}
+                        </span>`;
+                        
+                    miniContainer.innerHTML += `
+                        <span class="absolute pointer-events-none scale-75" style="${item.style}">
+                            ${item.icon}
+                        </span>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
